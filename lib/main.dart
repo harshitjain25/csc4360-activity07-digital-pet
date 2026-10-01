@@ -3,8 +3,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 // In-Class Activity 07: Digital Pet
-// Student: Parsh Jadon
-// Teammate: Harshit Jain
+// Student: Harshit Jain
+// Teammate: Parsh Jadon
 
 void main() {
   runApp(const DigitalPetApp());

@@ -293,16 +293,10 @@ We tested the following behaviors:
 
 ## Automated Test Evidence
 
-Add the final test result here after running:
-
-```bash
-flutter test
-```
-
-Example:
+All automated tests passed successfully.
 
 ```text
-All tests passed.
+00:01 +16: All tests passed!
 ```
 
 ## GitHub Collaboration
