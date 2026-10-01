@@ -3,8 +3,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 // In-Class Activity 07: Digital Pet
-// Student: Harshit Jain
-// Teammate: Parsh Jadon
+// Student: Parsh Jadon
+// Teammate: Harshit Jain
 
 void main() {
   runApp(const DigitalPetApp());
@@ -46,11 +46,14 @@ class _DigitalPetPageState extends State<DigitalPetPage> {
 
   String selectedActivity = 'Run';
 
+  String? actionReaction;
+
   final TextEditingController nameController =
       TextEditingController(text: 'Pip');
 
   Timer? hungerTimer;
   Timer? winTimer;
+  Timer? reactionTimer;
 
   @override
   void initState() {
@@ -143,6 +146,25 @@ class _DigitalPetPageState extends State<DigitalPetPage> {
     );
   }
 
+  void _showReaction(String emoji) {
+    reactionTimer?.cancel();
+
+    setState(() {
+      actionReaction = emoji;
+    });
+
+    reactionTimer = Timer(
+      const Duration(milliseconds: 900),
+      () {
+        if (!mounted) return;
+
+        setState(() {
+          actionReaction = null;
+        });
+      },
+    );
+  }
+
   void _saveName() {
     final newName = nameController.text.trim();
 
@@ -164,15 +186,21 @@ class _DigitalPetPageState extends State<DigitalPetPage> {
     setState(() {
       final nextHunger = _clampMeter(hunger - 10);
 
-      final happinessChange = nextHunger < 30 ? -20 : 10;
+      final happinessChange =
+          nextHunger < 30 ? -20 : 10;
 
       hunger = nextHunger;
+
       happiness = _clampMeter(
         happiness + happinessChange,
       );
     });
 
-    _showMessage('You fed $petName.');
+    _showReaction('🍖');
+
+    _showMessage(
+      'You fed $petName.',
+    );
 
     _updateOutcome();
   }
@@ -184,6 +212,7 @@ class _DigitalPetPageState extends State<DigitalPetPage> {
       _showMessage(
         '$petName is too tired to play.',
       );
+
       return;
     }
 
@@ -200,6 +229,8 @@ class _DigitalPetPageState extends State<DigitalPetPage> {
         energy - 10,
       );
     });
+
+    _showReaction('🎾');
 
     _showMessage(
       'You played with $petName.',
@@ -221,6 +252,8 @@ class _DigitalPetPageState extends State<DigitalPetPage> {
       );
     });
 
+    _showReaction('💤');
+
     _showMessage(
       '$petName rested.',
     );
@@ -236,6 +269,7 @@ class _DigitalPetPageState extends State<DigitalPetPage> {
         _showMessage(
           '$petName does not have enough energy to run.',
         );
+
         return;
       }
 
@@ -253,6 +287,8 @@ class _DigitalPetPageState extends State<DigitalPetPage> {
         );
       });
 
+      _showReaction('❤️');
+
       _showMessage(
         '$petName went for a run.',
       );
@@ -266,6 +302,8 @@ class _DigitalPetPageState extends State<DigitalPetPage> {
           hunger + 5,
         );
       });
+
+      _showReaction('💤');
 
       _showMessage(
         '$petName took a nap.',
@@ -327,6 +365,9 @@ class _DigitalPetPageState extends State<DigitalPetPage> {
 
     hungerTimer?.cancel();
 
+    reactionTimer?.cancel();
+    reactionTimer = null;
+
     setState(() {
       happiness = 50;
       hunger = 50;
@@ -336,6 +377,8 @@ class _DigitalPetPageState extends State<DigitalPetPage> {
       hasWon = false;
 
       selectedActivity = 'Run';
+
+      actionReaction = null;
     });
 
     _startHungerTimer();
@@ -345,9 +388,7 @@ class _DigitalPetPageState extends State<DigitalPetPage> {
     );
   }
 
-  void _showMessage(
-    String message,
-  ) {
+  void _showMessage(String message) {
     if (!mounted) {
       return;
     }
@@ -394,12 +435,11 @@ class _DigitalPetPageState extends State<DigitalPetPage> {
                   milliseconds: 400,
                 ),
           curve: Curves.easeOut,
-          builder:
-              (
-                context,
-                animatedValue,
-                child,
-              ) {
+          builder: (
+            context,
+            animatedValue,
+            child,
+          ) {
             return LinearProgressIndicator(
               value: animatedValue,
               minHeight: 10,
@@ -412,14 +452,139 @@ class _DigitalPetPageState extends State<DigitalPetPage> {
     );
   }
 
+  Widget _buildPetDisplay({
+    required bool reduceMotion,
+  }) {
+    return Column(
+      children: [
+        Stack(
+          alignment: Alignment.center,
+          children: [
+            AnimatedScale(
+              scale: _petScale,
+              duration: reduceMotion
+                  ? Duration.zero
+                  : const Duration(
+                      milliseconds: 180,
+                    ),
+              curve: Curves.easeOutBack,
+
+              child: ColorFiltered(
+                colorFilter: ColorFilter.mode(
+                  _moodColor,
+                  BlendMode.modulate,
+                ),
+
+                child: Image.asset(
+                  'assets/pet.png',
+                  height: 170,
+                  fit: BoxFit.contain,
+
+                  errorBuilder: (
+                    context,
+                    error,
+                    stackTrace,
+                  ) {
+                    return const Icon(
+                      Icons.pets,
+                      size: 140,
+                    );
+                  },
+                ),
+              ),
+            ),
+
+            if (actionReaction != null)
+              Positioned(
+                top: 0,
+                right: 25,
+
+                child: AnimatedOpacity(
+                  opacity: 1,
+                  duration: reduceMotion
+                      ? Duration.zero
+                      : const Duration(
+                          milliseconds: 250,
+                        ),
+
+                  child: Text(
+                    actionReaction!,
+                    style: const TextStyle(
+                      fontSize: 36,
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
+
+        const SizedBox(height: 14),
+
+        Text(
+          petName,
+          style: const TextStyle(
+            fontSize: 28,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+
+        const SizedBox(height: 8),
+
+        AnimatedSwitcher(
+          duration: reduceMotion
+              ? Duration.zero
+              : const Duration(
+                  milliseconds: 300,
+                ),
+
+          child: Text(
+            _petMessage,
+            key: ValueKey(
+              _petMessage,
+            ),
+            textAlign: TextAlign.center,
+
+            style: const TextStyle(
+              fontSize: 18,
+            ),
+          ),
+        ),
+
+        const SizedBox(height: 10),
+
+        Row(
+          mainAxisAlignment:
+              MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.circle,
+              size: 14,
+              color: _moodColor,
+            ),
+
+            const SizedBox(width: 6),
+
+            Text(
+              'Mood: $_moodLabel',
+              style: const TextStyle(
+                fontSize: 17,
+                fontWeight:
+                    FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(
     BuildContext context,
   ) {
     final reduceMotion =
-        MediaQuery.of(
-          context,
-        ).disableAnimations;
+        MediaQuery.of(context)
+            .disableAnimations;
 
     return Scaffold(
       appBar: AppBar(
@@ -441,6 +606,7 @@ class _DigitalPetPageState extends State<DigitalPetPage> {
               TextField(
                 controller:
                     nameController,
+
                 decoration:
                     const InputDecoration(
                   labelText:
@@ -457,6 +623,7 @@ class _DigitalPetPageState extends State<DigitalPetPage> {
               FilledButton(
                 onPressed:
                     _saveName,
+
                 child:
                     const Text(
                   'Save Name',
@@ -467,103 +634,9 @@ class _DigitalPetPageState extends State<DigitalPetPage> {
                 height: 24,
               ),
 
-              AnimatedScale(
-                scale:
-                    _petScale,
-                duration:
-                    reduceMotion
-                        ? Duration.zero
-                        : const Duration(
-                            milliseconds:
-                                180,
-                          ),
-                curve:
-                    Curves.easeOutBack,
-
-                child:
-                    ColorFiltered(
-                  colorFilter:
-                      ColorFilter.mode(
-                    _moodColor,
-                    BlendMode
-                        .modulate,
-                  ),
-
-                  child:
-                      Image.asset(
-                    'assets/pet.png',
-                    height: 170,
-                    fit:
-                        BoxFit.contain,
-
-                    errorBuilder:
-                        (
-                      context,
-                      error,
-                      stackTrace,
-                    ) {
-                      return const Icon(
-                        Icons.pets,
-                        size: 140,
-                      );
-                    },
-                  ),
-                ),
-              ),
-
-              const SizedBox(
-                height: 14,
-              ),
-
-              Text(
-                petName,
-                style:
-                    const TextStyle(
-                  fontSize: 28,
-                  fontWeight:
-                      FontWeight.bold,
-                ),
-              ),
-
-              const SizedBox(
-                height: 8,
-              ),
-
-              AnimatedSwitcher(
-                duration:
-                    reduceMotion
-                        ? Duration.zero
-                        : const Duration(
-                            milliseconds:
-                                300,
-                          ),
-
-                child: Text(
-                  _petMessage,
-                  key: ValueKey(
-                    _petMessage,
-                  ),
-                  textAlign:
-                      TextAlign.center,
-                  style:
-                      const TextStyle(
-                    fontSize: 18,
-                  ),
-                ),
-              ),
-
-              const SizedBox(
-                height: 8,
-              ),
-
-              Text(
-                'Mood: $_moodLabel',
-                style:
-                    const TextStyle(
-                  fontSize: 17,
-                  fontWeight:
-                      FontWeight.bold,
-                ),
+              _buildPetDisplay(
+                reduceMotion:
+                    reduceMotion,
               ),
 
               const SizedBox(
@@ -609,10 +682,12 @@ class _DigitalPetPageState extends State<DigitalPetPage> {
                         _canAct
                             ? _feedPet
                             : null,
+
                     icon:
                         const Icon(
                       Icons.restaurant,
                     ),
+
                     label:
                         const Text(
                       'Feed',
@@ -624,11 +699,13 @@ class _DigitalPetPageState extends State<DigitalPetPage> {
                         _canAct
                             ? _playPet
                             : null,
+
                     icon:
                         const Icon(
                       Icons
                           .sports_esports,
                     ),
+
                     label:
                         const Text(
                       'Play',
@@ -640,10 +717,12 @@ class _DigitalPetPageState extends State<DigitalPetPage> {
                         _canAct
                             ? _restPet
                             : null,
+
                     icon:
                         const Icon(
                       Icons.bedtime,
                     ),
+
                     label:
                         const Text(
                       'Rest',
@@ -653,10 +732,12 @@ class _DigitalPetPageState extends State<DigitalPetPage> {
                   OutlinedButton.icon(
                     onPressed:
                         _resetPet,
+
                     icon:
                         const Icon(
                       Icons.restart_alt,
                     ),
+
                     label:
                         const Text(
                       'Reset',
@@ -700,6 +781,7 @@ class _DigitalPetPageState extends State<DigitalPetPage> {
                     child:
                         Text('Run'),
                   ),
+
                   DropdownMenuItem(
                     value: 'Sleep',
                     child:
@@ -732,6 +814,7 @@ class _DigitalPetPageState extends State<DigitalPetPage> {
                     _canAct
                         ? _doSelectedActivity
                         : null,
+
                 child:
                     Text(
                   'Do $selectedActivity',
@@ -778,6 +861,8 @@ class _DigitalPetPageState extends State<DigitalPetPage> {
   void dispose() {
     hungerTimer?.cancel();
     winTimer?.cancel();
+    reactionTimer?.cancel();
+
     nameController.dispose();
 
     super.dispose();
