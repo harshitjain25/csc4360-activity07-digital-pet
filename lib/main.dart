@@ -1,122 +1,870 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
+// In-Class Activity 07: Digital Pet
+// Student: Parsh Jadon
+// Teammate: Harshit Jain
+
 void main() {
-  runApp(const MyApp());
+  runApp(const DigitalPetApp());
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+class DigitalPetApp extends StatelessWidget {
+  const DigitalPetApp({super.key});
 
-  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Demo',
+      debugShowCheckedModeBanner: false,
+      title: 'Digital Pet',
       theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // TRY THIS: Try running your application with "flutter run". You'll see
-        // the application has a purple toolbar. Then, without quitting the app,
-        // try changing the seedColor in the colorScheme below to Colors.green
-        // and then invoke "hot reload" (save your changes or press the "hot
-        // reload" button in a Flutter-supported IDE, or press "r" if you used
-        // the command line to start the app).
-        //
-        // Notice that the counter didn't reset back to zero; the application
-        // state is not lost during the reload. To reset the state, use hot
-        // restart instead.
-        //
-        // This works for code too, not just values: Most code changes can be
-        // tested with just a hot reload.
-        colorScheme: .fromSeed(seedColor: Colors.deepPurple),
+        colorSchemeSeed: Colors.indigo,
+        useMaterial3: true,
       ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
+      home: const DigitalPetPage(),
     );
   }
 }
 
-class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key, required this.title});
-
-  // This widget is the home page of your application. It is stateful, meaning
-  // that it has a State object (defined below) that contains fields that affect
-  // how it looks.
-
-  // This class is the configuration for the state. It holds the values (in this
-  // case the title) provided by the parent (in this case the App widget) and
-  // used by the build method of the State. Fields in a Widget subclass are
-  // always marked "final".
-
-  final String title;
+class DigitalPetPage extends StatefulWidget {
+  const DigitalPetPage({super.key});
 
   @override
-  State<MyHomePage> createState() => _MyHomePageState();
+  State<DigitalPetPage> createState() => _DigitalPetPageState();
 }
 
-class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
+class _DigitalPetPageState extends State<DigitalPetPage> {
+  String petName = 'Pip';
 
-  void _incrementCounter() {
-    setState(() {
-      // This call to setState tells the Flutter framework that something has
-      // changed in this State, which causes it to rerun the build method below
-      // so that the display can reflect the updated values. If we changed
-      // _counter without calling setState(), then the build method would not be
-      // called again, and so nothing would appear to happen.
-      _counter++;
-    });
-  }
+  int happiness = 50;
+  int hunger = 50;
+  int energy = 70;
+
+  bool gameOver = false;
+  bool hasWon = false;
+
+  String selectedActivity = 'Run';
+
+  String? actionReaction;
+
+  final TextEditingController nameController =
+      TextEditingController(text: 'Pip');
+
+  Timer? hungerTimer;
+  Timer? winTimer;
+  Timer? reactionTimer;
 
   @override
-  Widget build(BuildContext context) {
-    // This method is rerun every time setState is called, for instance as done
-    // by the _incrementCounter method above.
-    //
-    // The Flutter framework has been optimized to make rerunning build methods
-    // fast, so that you can just rebuild anything that needs updating rather
-    // than having to individually change instances of widgets.
-    return Scaffold(
-      appBar: AppBar(
-        // TRY THIS: Try changing the color here to a specific color (to
-        // Colors.amber, perhaps?) and trigger a hot reload to see the AppBar
-        // change color while the other colors stay the same.
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        // Here we take the value from the MyHomePage object that was created by
-        // the App.build method, and use it to set our appbar title.
-        title: Text(widget.title),
-      ),
-      body: Center(
-        // Center is a layout widget. It takes a single child and positions it
-        // in the middle of the parent.
-        child: Column(
-          // Column is also a layout widget. It takes a list of children and
-          // arranges them vertically. By default, it sizes itself to fit its
-          // children horizontally, and tries to be as tall as its parent.
-          //
-          // Column has various properties to control how it sizes itself and
-          // how it positions its children. Here we use mainAxisAlignment to
-          // center the children vertically; the main axis here is the vertical
-          // axis because Columns are vertical (the cross axis would be
-          // horizontal).
-          //
-          // TRY THIS: Invoke "debug painting" (choose the "Toggle Debug Paint"
-          // action in the IDE, or press "p" in the console), to see the
-          // wireframe for each widget.
-          mainAxisAlignment: .center,
+  void initState() {
+    super.initState();
+    _startHungerTimer();
+  }
+
+  int _clampMeter(int value) {
+    return value.clamp(0, 100).toInt();
+  }
+
+  bool get _canAct => !gameOver && !hasWon;
+
+  String get _moodLabel {
+    if (happiness > 70) {
+      return 'Happy';
+    } else if (happiness >= 30) {
+      return 'Neutral';
+    } else {
+      return 'Unhappy';
+    }
+  }
+
+  Color get _moodColor {
+    if (happiness > 70) {
+      return Colors.green;
+    } else if (happiness >= 30) {
+      return Colors.yellow;
+    } else {
+      return Colors.red;
+    }
+  }
+
+  double get _petScale {
+    if (happiness > 70) {
+      return 1.06;
+    } else if (happiness < 30) {
+      return 0.94;
+    } else {
+      return 1.0;
+    }
+  }
+
+  String get _petMessage {
+    if (gameOver) {
+      return 'I need a rest.';
+    }
+
+    if (hasWon) {
+      return 'Best day ever!';
+    }
+
+    if (hunger > 80) {
+      return "I'm starving!";
+    }
+
+    if (happiness <= 30) {
+      return 'Play with me?';
+    }
+
+    if (energy < 20) {
+      return 'So sleepy...';
+    }
+
+    return "Hi, I'm $petName!";
+  }
+
+  void _startHungerTimer() {
+    hungerTimer?.cancel();
+
+    hungerTimer = Timer.periodic(
+      const Duration(seconds: 30),
+      (timer) {
+        if (!mounted || !_canAct) {
+          timer.cancel();
+          return;
+        }
+
+        setState(() {
+          if (hunger + 5 > 100) {
+            hunger = 100;
+            happiness = _clampMeter(happiness - 20);
+          } else {
+            hunger += 5;
+          }
+        });
+
+        _updateOutcome();
+      },
+    );
+  }
+
+  void _showReaction(String emoji) {
+    reactionTimer?.cancel();
+
+    setState(() {
+      actionReaction = emoji;
+    });
+
+    reactionTimer = Timer(
+      const Duration(milliseconds: 900),
+      () {
+        if (!mounted) return;
+
+        setState(() {
+          actionReaction = null;
+        });
+      },
+    );
+  }
+
+  void _saveName() {
+    final newName = nameController.text.trim();
+
+    if (newName.isEmpty) {
+      _showMessage('Please enter a pet name.');
+      return;
+    }
+
+    setState(() {
+      petName = newName;
+    });
+
+    _showMessage('Pet name changed to $petName');
+  }
+
+  void _feedPet() {
+    if (!_canAct) return;
+
+    setState(() {
+      final nextHunger = _clampMeter(hunger - 10);
+
+      final happinessChange =
+          nextHunger < 30 ? -20 : 10;
+
+      hunger = nextHunger;
+
+      happiness = _clampMeter(
+        happiness + happinessChange,
+      );
+    });
+
+    _showReaction('🍖');
+
+    _showMessage(
+      'You fed $petName.',
+    );
+
+    _updateOutcome();
+  }
+
+  void _playPet() {
+    if (!_canAct) return;
+
+    if (energy < 10) {
+      _showMessage(
+        '$petName is too tired to play.',
+      );
+
+      return;
+    }
+
+    setState(() {
+      happiness = _clampMeter(
+        happiness + 15,
+      );
+
+      hunger = _clampMeter(
+        hunger + 5,
+      );
+
+      energy = _clampMeter(
+        energy - 10,
+      );
+    });
+
+    _showReaction('🎾');
+
+    _showMessage(
+      'You played with $petName.',
+    );
+
+    _updateOutcome();
+  }
+
+  void _restPet() {
+    if (!_canAct) return;
+
+    setState(() {
+      energy = _clampMeter(
+        energy + 20,
+      );
+
+      hunger = _clampMeter(
+        hunger + 5,
+      );
+    });
+
+    _showReaction('💤');
+
+    _showMessage(
+      '$petName rested.',
+    );
+
+    _updateOutcome();
+  }
+
+  void _doSelectedActivity() {
+    if (!_canAct) return;
+
+    if (selectedActivity == 'Run') {
+      if (energy < 20) {
+        _showMessage(
+          '$petName does not have enough energy to run.',
+        );
+
+        return;
+      }
+
+      setState(() {
+        happiness = _clampMeter(
+          happiness + 20,
+        );
+
+        hunger = _clampMeter(
+          hunger + 10,
+        );
+
+        energy = _clampMeter(
+          energy - 20,
+        );
+      });
+
+      _showReaction('❤️');
+
+      _showMessage(
+        '$petName went for a run.',
+      );
+    } else {
+      setState(() {
+        energy = _clampMeter(
+          energy + 30,
+        );
+
+        hunger = _clampMeter(
+          hunger + 5,
+        );
+      });
+
+      _showReaction('💤');
+
+      _showMessage(
+        '$petName took a nap.',
+      );
+    }
+
+    _updateOutcome();
+  }
+
+  void _updateOutcome() {
+    if (gameOver || hasWon) {
+      return;
+    }
+
+    if (hunger == 100 &&
+        happiness <= 10) {
+      winTimer?.cancel();
+      winTimer = null;
+
+      hungerTimer?.cancel();
+
+      setState(() {
+        gameOver = true;
+      });
+
+      return;
+    }
+
+    if (happiness <= 80) {
+      winTimer?.cancel();
+      winTimer = null;
+
+      return;
+    }
+
+    winTimer ??= Timer(
+      const Duration(minutes: 3),
+      () {
+        winTimer = null;
+
+        if (!mounted ||
+            gameOver ||
+            happiness <= 80) {
+          return;
+        }
+
+        setState(() {
+          hasWon = true;
+        });
+
+        hungerTimer?.cancel();
+      },
+    );
+  }
+
+  void _resetPet() {
+    winTimer?.cancel();
+    winTimer = null;
+
+    hungerTimer?.cancel();
+
+    reactionTimer?.cancel();
+    reactionTimer = null;
+
+    setState(() {
+      happiness = 50;
+      hunger = 50;
+      energy = 70;
+
+      gameOver = false;
+      hasWon = false;
+
+      selectedActivity = 'Run';
+
+      actionReaction = null;
+    });
+
+    _startHungerTimer();
+
+    _showMessage(
+      'Game reset.',
+    );
+  }
+
+  void _showMessage(String message) {
+    if (!mounted) {
+      return;
+    }
+
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(message),
+          duration: const Duration(
+            seconds: 2,
+          ),
+        ),
+      );
+  }
+
+  Widget _buildMeter({
+    required String label,
+    required int value,
+    required bool reduceMotion,
+  }) {
+    return Column(
+      crossAxisAlignment:
+          CrossAxisAlignment.start,
+      children: [
+        Text(
+          '$label: $value',
+          style: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+
+        const SizedBox(height: 6),
+
+        TweenAnimationBuilder<double>(
+          tween: Tween<double>(
+            begin: 0,
+            end: value / 100,
+          ),
+          duration: reduceMotion
+              ? Duration.zero
+              : const Duration(
+                  milliseconds: 400,
+                ),
+          curve: Curves.easeOut,
+          builder: (
+            context,
+            animatedValue,
+            child,
+          ) {
+            return LinearProgressIndicator(
+              value: animatedValue,
+              minHeight: 10,
+            );
+          },
+        ),
+
+        const SizedBox(height: 16),
+      ],
+    );
+  }
+
+  Widget _buildPetDisplay({
+    required bool reduceMotion,
+  }) {
+    return Column(
+      children: [
+        Stack(
+          alignment: Alignment.center,
           children: [
-            const Text('You have pushed the button this many times:'),
+            AnimatedScale(
+              scale: _petScale,
+              duration: reduceMotion
+                  ? Duration.zero
+                  : const Duration(
+                      milliseconds: 180,
+                    ),
+              curve: Curves.easeOutBack,
+
+              child: ColorFiltered(
+                colorFilter: ColorFilter.mode(
+                  _moodColor,
+                  BlendMode.modulate,
+                ),
+
+                child: Image.asset(
+                  'assets/pet.png',
+                  height: 170,
+                  fit: BoxFit.contain,
+
+                  errorBuilder: (
+                    context,
+                    error,
+                    stackTrace,
+                  ) {
+                    return const Icon(
+                      Icons.pets,
+                      size: 140,
+                    );
+                  },
+                ),
+              ),
+            ),
+
+            if (actionReaction != null)
+              Positioned(
+                top: 0,
+                right: 25,
+
+                child: AnimatedOpacity(
+                  opacity: 1,
+                  duration: reduceMotion
+                      ? Duration.zero
+                      : const Duration(
+                          milliseconds: 250,
+                        ),
+
+                  child: Text(
+                    actionReaction!,
+                    style: const TextStyle(
+                      fontSize: 36,
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
+
+        const SizedBox(height: 14),
+
+        Text(
+          petName,
+          style: const TextStyle(
+            fontSize: 28,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+
+        const SizedBox(height: 8),
+
+        AnimatedSwitcher(
+          duration: reduceMotion
+              ? Duration.zero
+              : const Duration(
+                  milliseconds: 300,
+                ),
+
+          child: Text(
+            _petMessage,
+            key: ValueKey(
+              _petMessage,
+            ),
+            textAlign: TextAlign.center,
+
+            style: const TextStyle(
+              fontSize: 18,
+            ),
+          ),
+        ),
+
+        const SizedBox(height: 10),
+
+        Row(
+          mainAxisAlignment:
+              MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.circle,
+              size: 14,
+              color: _moodColor,
+            ),
+
+            const SizedBox(width: 6),
+
             Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headlineMedium,
+              'Mood: $_moodLabel',
+              style: const TextStyle(
+                fontSize: 17,
+                fontWeight:
+                    FontWeight.bold,
+              ),
             ),
           ],
         ),
+      ],
+    );
+  }
+
+  @override
+  Widget build(
+    BuildContext context,
+  ) {
+    final reduceMotion =
+        MediaQuery.of(context)
+            .disableAnimations;
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text(
+          'Digital Pet',
+        ),
+        centerTitle: true,
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: const Icon(Icons.add),
+
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding:
+              const EdgeInsets.all(
+            20,
+          ),
+
+          child: Column(
+            children: [
+              TextField(
+                controller:
+                    nameController,
+
+                decoration:
+                    const InputDecoration(
+                  labelText:
+                      'Pet name',
+                  border:
+                      OutlineInputBorder(),
+                ),
+              ),
+
+              const SizedBox(
+                height: 10,
+              ),
+
+              FilledButton(
+                onPressed:
+                    _saveName,
+
+                child:
+                    const Text(
+                  'Save Name',
+                ),
+              ),
+
+              const SizedBox(
+                height: 24,
+              ),
+
+              _buildPetDisplay(
+                reduceMotion:
+                    reduceMotion,
+              ),
+
+              const SizedBox(
+                height: 24,
+              ),
+
+              _buildMeter(
+                label:
+                    'Happiness',
+                value:
+                    happiness,
+                reduceMotion:
+                    reduceMotion,
+              ),
+
+              _buildMeter(
+                label:
+                    'Hunger',
+                value:
+                    hunger,
+                reduceMotion:
+                    reduceMotion,
+              ),
+
+              _buildMeter(
+                label:
+                    'Energy',
+                value:
+                    energy,
+                reduceMotion:
+                    reduceMotion,
+              ),
+
+              Wrap(
+                spacing: 10,
+                runSpacing: 10,
+                alignment:
+                    WrapAlignment.center,
+
+                children: [
+                  FilledButton.icon(
+                    onPressed:
+                        _canAct
+                            ? _feedPet
+                            : null,
+
+                    icon:
+                        const Icon(
+                      Icons.restaurant,
+                    ),
+
+                    label:
+                        const Text(
+                      'Feed',
+                    ),
+                  ),
+
+                  FilledButton.icon(
+                    onPressed:
+                        _canAct
+                            ? _playPet
+                            : null,
+
+                    icon:
+                        const Icon(
+                      Icons
+                          .sports_esports,
+                    ),
+
+                    label:
+                        const Text(
+                      'Play',
+                    ),
+                  ),
+
+                  FilledButton.icon(
+                    onPressed:
+                        _canAct
+                            ? _restPet
+                            : null,
+
+                    icon:
+                        const Icon(
+                      Icons.bedtime,
+                    ),
+
+                    label:
+                        const Text(
+                      'Rest',
+                    ),
+                  ),
+
+                  OutlinedButton.icon(
+                    onPressed:
+                        _resetPet,
+
+                    icon:
+                        const Icon(
+                      Icons.restart_alt,
+                    ),
+
+                    label:
+                        const Text(
+                      'Reset',
+                    ),
+                  ),
+                ],
+              ),
+
+              const SizedBox(
+                height: 24,
+              ),
+
+              const Divider(),
+
+              const SizedBox(
+                height: 12,
+              ),
+
+              const Text(
+                'Activity Selection',
+                style:
+                    TextStyle(
+                  fontSize: 20,
+                  fontWeight:
+                      FontWeight.bold,
+                ),
+              ),
+
+              const SizedBox(
+                height: 12,
+              ),
+
+              DropdownButton<String>(
+                value:
+                    selectedActivity,
+
+                items:
+                    const [
+                  DropdownMenuItem(
+                    value: 'Run',
+                    child:
+                        Text('Run'),
+                  ),
+
+                  DropdownMenuItem(
+                    value: 'Sleep',
+                    child:
+                        Text('Sleep'),
+                  ),
+                ],
+
+                onChanged:
+                    _canAct
+                        ? (value) {
+                            if (value ==
+                                null) {
+                              return;
+                            }
+
+                            setState(() {
+                              selectedActivity =
+                                  value;
+                            });
+                          }
+                        : null,
+              ),
+
+              const SizedBox(
+                height: 8,
+              ),
+
+              FilledButton(
+                onPressed:
+                    _canAct
+                        ? _doSelectedActivity
+                        : null,
+
+                child:
+                    Text(
+                  'Do $selectedActivity',
+                ),
+              ),
+
+              const SizedBox(
+                height: 24,
+              ),
+
+              if (gameOver)
+                const Text(
+                  'GAME OVER',
+                  style:
+                      TextStyle(
+                    fontSize: 28,
+                    fontWeight:
+                        FontWeight.bold,
+                    color:
+                        Colors.red,
+                  ),
+                ),
+
+              if (hasWon)
+                const Text(
+                  'YOU WON!',
+                  style:
+                      TextStyle(
+                    fontSize: 28,
+                    fontWeight:
+                        FontWeight.bold,
+                    color:
+                        Colors.green,
+                  ),
+                ),
+            ],
+          ),
+        ),
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    hungerTimer?.cancel();
+    winTimer?.cancel();
+    reactionTimer?.cancel();
+
+    nameController.dispose();
+
+    super.dispose();
   }
 }
